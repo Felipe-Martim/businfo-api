@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BusInfo – Horários e Itinerários de Ônibus | Demonstração Funcional (A3)</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --primary: #1d4ed8;
+      --primary-dark: #1e3a8a;
+      --primary-light: #dbeafe;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --success: #15803d;
+      --success-bg: #dcfce7;
+      --warning: #b45309;
+      --warning-bg: #fef3c7;
+      --danger: #b91c1c;
+      --danger-bg: #fee2e2;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      color: #fff;
+      padding: 20px 28px;
+      border-bottom: 4px solid #3b82f6;
+    }
+    .header-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand h1 {
+      font-size: 24px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand p {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 4px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-outline {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border-color: rgba(255,255,255,0.25);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.2); }
+
+    .container {
+      max-width: 1320px;
+      margin: 22px auto;
+      padding: 0 20px 40px;
+    }
+
+    /* Stats bar */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+    .stat-card .value { font-size: 22px; font-weight: 800; color: var(--primary-dark); margin-top: 2px; }
+    .stat-badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    /* Main Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 980px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .panel-body { padding: 18px; }
+
+    /* Search box (UC04 / RF05) */
+    .search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+
+    /* Line list (UC01 / RF01) */
+    .lines-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 540px;
+      overflow-y: auto;
+    }
+    .line-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+    }
+    .line-item:hover {
+      border-color: #93c5fd;
+      background: #f8fafc;
+    }
+    .line-item.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+    }
+    .line-badge {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 6px 11px;
+      border-radius: 8px;
+      min-width: 54px;
+      text-align: center;
+    }
+    .line-info h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+    .line-info p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Right column content */
+    .detail-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+    .route-terminals {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .terminal-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .terminal-box span { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+    .terminal-box strong { display: block; font-size: 14px; color: var(--text); margin-top: 2px; }
+
+    /* Alert banner (RF08) */
+    .alert-box {
+      padding: 11px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      border-left: 4px solid var(--primary);
+      background: #eff6ff;
+    }
+    .alert-box.warn {
+      background: var(--warning-bg);
+      border-left-color: var(--warning);
+      color: #78350f;
+    }
+
+    /* Two-column detail: Horários (UC02) + Itinerário (UC03) */
+    .detail-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 760px) {
+      .detail-cols { grid-template-columns: 1fr; }
+    }
+    .sub-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 15px;
+      background: #fff;
+    }
+    .sub-card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Day filter tabs (RF06) */
+    .day-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .day-tab {
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      cursor: pointer;
+    }
+    .day-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .times-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+      gap: 8px;
+    }
+    .time-pill {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--primary-dark);
+    }
+    .time-pill small {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    /* Stops timeline (UC03 / RF03 / RF04) */
+    .timeline {
+      position: relative;
+      padding-left: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: #93c5fd;
+    }
+    .stop-item {
+      position: relative;
+    }
+    .stop-dot {
+      position: absolute;
+      left: -22px;
+      top: 4px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--primary);
+    }
+    .stop-item:first-child .stop-dot { background: var(--success); border-color: var(--success); }
+    .stop-item:last-child .stop-dot { background: var(--danger); border-color: var(--danger); }
+    .stop-item h4 { font-size: 13.5px; font-weight: 700; color: var(--text); }
+    .stop-item p { font-size: 12px; color: var(--muted); }
+
+    /* API Live Console */
+    .api-console {
+      margin-top: 22px;
+    }
+    .endpoint-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .ep-btn {
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      padding: 7px 11px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      cursor: pointer;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .ep-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+    .console-bar {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 10px 14px;
+      border-radius: 8px 8px 0 0;
+      font-family: Consolas, monospace;
+      font-size: 12.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .console-output {
+      background: #0f172a;
+      color: #38bdf8;
+      padding: 14px;
+      border-radius: 0 0 8px 8px;
+      font-family: Consolas, monospace;
+      font-size: 12.5px;
+      max-height: 320px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    .badge-http {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .badge-200 { background: #166534; color: #dcfce7; }
+    .badge-404 { background: #991b1b; color: #fee2e2; }
+
+    /* New Line Form */
+    .new-line-form {
+      display: grid;
+      grid-template-columns: 90px 1.2fr 1fr 1fr auto;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--border);
+    }
+    @media (max-width: 900px) {
+      .new-line-form { grid-template-columns: 1fr; }
+    }
+    .new-line-form input {
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <h1>🚌 BusInfo – Horários e Itinerários de Ônibus</h1>
+        <p>A3 – Implementação da Primeira Versão | Integrantes: Felipe Martim, Gabriel Oliveira, João Carula, Marcelo Motta, Paulo Henrique e Cauan Gutierre</p>
+      </div>
+      <div class="header-actions">
+        <a href="/api-docs" class="btn btn-primary">📘 Documentação Swagger (RNF05)</a>
+        <a href="/api/v1/linhas" target="_blank" class="btn btn-outline">🔗 JSON /api/v1/linhas</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Status & Database Metrics -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div>
+          <div class="label">Banco de Dados</div>
+          <div class="value" id="stat-db">SQLite Ativo</div>
+        </div>
+        <span class="stat-badge">Online (RNF04)</span>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="label">Linhas Cadastradas (RF01)</div>
+          <div class="value" id="stat-linhas">-</div>
+        </div>
+        <span class="stat-badge">UC01</span>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="label">Horários de Saída (RF02)</div>
+          <div class="value" id="stat-horarios">-</div>
+        </div>
+        <span class="stat-badge">UC02</span>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="label">Pontos de Parada (RF04)</div>
+          <div class="value" id="stat-pontos">-</div>
+        </div>
+        <span class="stat-badge">UC03</span>
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <!-- Coluna Esquerda: Busca (UC04) e Lista de Linhas (UC01) -->
+      <aside class="panel">
+        <div class="panel-header">
+          <h2>Linhas de Ônibus (UC01 / UC04)</h2>
+          <span style="font-size:12px;color:var(--muted);" id="lines-count">Carregando...</span>
+        </div>
+        <div class="panel-body">
+          <form class="search-box" id="search-form">
+            <input type="text" id="search-input" placeholder="Buscar por número ou nome (ex: 101, Centro)..." />
+            <button type="submit" class="btn btn-primary">Buscar</button>
+            <button type="button" id="clear-btn" class="btn" style="background:#e2e8f0;color:#1e293b;">Limpar</button>
+          </form>
+          <div class="lines-list" id="lines-list"></div>
+        </div>
+      </aside>
+
+      <!-- Coluna Direita: Detalhes da Linha, Horários (UC02) e Itinerário (UC03) -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Detalhes da Linha, Horários e Itinerário (UC02 / UC03)</h2>
+          <span style="font-size:12px;color:var(--primary);font-weight:700;" id="active-endpoint-label">GET /api/v1/linhas/1</span>
+        </div>
+        <div class="panel-body" id="line-detail-body">
+          <div class="detail-header">
+            <div>
+              <span class="line-badge" id="detail-numero">101</span>
+              <strong style="font-size:18px;margin-left:10px;" id="detail-nome">Centro - Bairro São José</strong>
+            </div>
+            <span style="font-size:12px;color:var(--muted);" id="detail-id">ID #1</span>
+          </div>
+
+          <!-- Origem e Destino (RF07) -->
+          <div class="route-terminals">
+            <div class="terminal-box">
+              <span>🟢 Ponto Inicial / Origem (RF07)</span>
+              <strong id="detail-origem">Terminal Central</strong>
+            </div>
+            <div class="terminal-box">
+              <span>🔴 Ponto Final / Destino (RF07)</span>
+              <strong id="detail-destino">Bairro São José</strong>
+            </div>
+          </div>
+
+          <!-- Avisos e Alterações (RF08) -->
+          <div id="detail-avisos"></div>
+
+          <div class="detail-cols">
+            <!-- Horários de Saída (UC02 / RF02 / RF06) -->
+            <div class="sub-card">
+              <h3>
+                <span>🕒 Horários de Saída (RF02)</span>
+                <small style="color:var(--muted);font-weight:500;" id="horarios-count"></small>
+              </h3>
+              <div class="day-tabs" id="day-tabs">
+                <button class="day-tab active" data-dia="">Todos</button>
+                <button class="day-tab" data-dia="Dias Úteis">Dias Úteis</button>
+                <button class="day-tab" data-dia="Sábado">Sábado</button>
+                <button class="day-tab" data-dia="Domingo">Domingo</button>
+              </div>
+              <div class="times-grid" id="times-grid"></div>
+            </div>
+
+            <!-- Itinerário e Pontos de Parada (UC03 / RF03 / RF04) -->
+            <div class="sub-card">
+              <h3>
+                <span>📍 Itinerário e Pontos de Parada (RF03 / RF04)</span>
+                <small style="color:var(--muted);font-weight:500;" id="pontos-count"></small>
+              </h3>
+              <div class="timeline" id="stops-timeline"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Console Interativo de Testes da API -->
+    <section class="panel api-console">
+      <div class="panel-header">
+        <h2>⚡ Console de Demonstração e Testes dos Endpoints (JSON em Tempo Real)</h2>
+        <span style="font-size:12px;color:var(--muted);">Clique em qualquer endpoint para executar a consulta real na API</span>
+      </div>
+      <div class="panel-body">
+        <div class="endpoint-buttons">
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas')">GET /api/v1/linhas</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas/1')">GET /api/v1/linhas/1</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas/1/horarios')">GET /api/v1/linhas/1/horarios</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas/1/horarios?dia_semana=Dias%20%C3%9Ateis')">GET /api/v1/linhas/1/horarios?dia_semana=Dias Úteis</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas/1/itinerario')">GET /api/v1/linhas/1/itinerario</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas/busca?termo=101')">GET /api/v1/linhas/busca?termo=101</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/avisos')">GET /api/v1/avisos (RF08)</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas?envelope=true')">GET /api/v1/linhas?envelope=true (Seção 5)</button>
+          <button class="ep-btn" onclick="testEndpoint('/api/v1/linhas/999')">GET /api/v1/linhas/999 (Teste 404)</button>
+        </div>
+
+        <div class="console-bar">
+          <div>
+            <strong>Requisição:</strong> <span id="console-url">GET /api/v1/linhas</span>
+          </div>
+          <div>
+            <span id="console-status" class="badge-http badge-200">200 OK</span>
+            <span id="console-time" style="margin-left:8px;color:#94a3b8;">0.00ms</span>
+          </div>
+        </div>
+        <pre class="console-output" id="console-json">Carregando resposta da API...</pre>
+
+        <!-- Formulário rápido para testar inserção no Banco de Dados -->
+        <form class="new-line-form" id="create-line-form">
+          <input type="text" id="new-numero" placeholder="Nº (ex: 601)" required />
+          <input type="text" id="new-nome" placeholder="Nome da Linha (ex: Centro - Aeroporto)" required />
+          <input type="text" id="new-origem" placeholder="Origem (ex: Terminal Central)" required />
+          <input type="text" id="new-destino" placeholder="Destino (ex: Aeroporto)" required />
+          <button type="submit" class="btn btn-primary">+ Cadastrar Linha (POST)</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let currentLineId = 1;
+    let currentDayFilter = '';
+
+    async function fetchApi(url, options = {}) {
+      const t0 = performance.now();
+      const res = await fetch(url, options);
+      const t1 = performance.now();
+      const headerTime = res.headers.get('X-Response-Time') || `${(t1 - t0).toFixed(2)}ms`;
+      const data = await res.json();
+
+      // Atualiza o console ao vivo
+      document.getElementById('console-url').textContent = `${options.method || 'GET'} ${url}`;
+      const statusEl = document.getElementById('console-status');
+      statusEl.textContent = `${res.status} ${res.ok ? 'OK' : 'ERRO'}`;
+      statusEl.className = `badge-http ${res.ok ? 'badge-200' : 'badge-404'}`;
+      document.getElementById('console-time').textContent = `Tempo: ${headerTime} (RNF01 < 2s)`;
+      document.getElementById('console-json').textContent = JSON.stringify(data, null, 2);
+
+      return { res, data };
+    }
+
+    async function loadStatus() {
+      const { data } = await fetchApi('/api/v1/status');
+      if (data && data.data && data.data.totais) {
+        document.getElementById('stat-linhas').textContent = data.data.totais.linhas;
+        document.getElementById('stat-horarios').textContent = data.data.totais.horarios;
+        document.getElementById('stat-pontos').textContent = data.data.totais.pontos_parada;
+      }
+    }
+
+    async function loadLines(searchTerm = '') {
+      const url = searchTerm
+        ? `/api/v1/linhas/busca?termo=${encodeURIComponent(searchTerm)}`
+        : '/api/v1/linhas';
+
+      const { data } = await fetchApi(url);
+      const listEl = document.getElementById('lines-list');
+      document.getElementById('lines-count').textContent = `${data.length} linha(s)`;
+
+      if (!data.length) {
+        listEl.innerHTML = `<p style="color:var(--muted);font-size:13px;padding:12px;">Nenhuma linha encontrada para "${searchTerm}".</p>`;
+        return;
+      }
+
+      listEl.innerHTML = data.map(line => `
+        <div class="line-item ${line.id === currentLineId ? 'active' : ''}" onclick="selectLine(${line.id})">
+          <div class="line-badge">${line.numero}</div>
+          <div class="line-info">
+            <h3>${line.nome}</h3>
+            <p>${line.origem} ➔ ${line.destino}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function selectLine(id) {
+      currentLineId = id;
+      document.getElementById('active-endpoint-label').textContent = `GET /api/v1/linhas/${id}`;
+
+      // Destaca item ativo
+      await loadLines(document.getElementById('search-input').value.trim());
+
+      // Busca detalhes da linha (RF01, RF07, RF08)
+      const { data: linha } = await fetchApi(`/api/v1/linhas/${id}`);
+      document.getElementById('detail-numero').textContent = linha.numero;
+      document.getElementById('detail-nome').textContent = linha.nome;
+      document.getElementById('detail-id').textContent = `ID #${linha.id}`;
+      document.getElementById('detail-origem').textContent = linha.origem;
+      document.getElementById('detail-destino').textContent = linha.destino;
+
+      // Renderiza avisos (RF08)
+      const avisosEl = document.getElementById('detail-avisos');
+      if (linha.avisos && linha.avisos.length) {
+        avisosEl.innerHTML = linha.avisos.map(a => {
+          const isWarn = a.tipo.toLowerCase().includes('altera') || a.tipo.toLowerCase().includes('interrup');
+          return `<div class="alert-box ${isWarn ? 'warn' : ''}">
+            <strong>📢 ${a.tipo} (RF08):</strong> ${a.descricao}
+          </div>`;
+        }).join('');
+      } else {
+        avisosEl.innerHTML = '';
+      }
+
+      await loadHorarios(id, currentDayFilter);
+      await loadItinerario(id);
+    }
+
+    async function loadHorarios(id, dia = '') {
+      const url = dia
+        ? `/api/v1/linhas/${id}/horarios?dia_semana=${encodeURIComponent(dia)}`
+        : `/api/v1/linhas/${id}/horarios`;
+
+      const { data } = await fetchApi(url);
+      const detalhes = data.detalhes || [];
+      document.getElementById('horarios-count').textContent = `${detalhes.length} saída(s)`;
+
+      const grid = document.getElementById('times-grid');
+      if (!detalhes.length) {
+        grid.innerHTML = `<p style="grid-column:1/-1;font-size:13px;color:var(--muted);">Sem horários para este filtro.</p>`;
+        return;
+      }
+
+      grid.innerHTML = detalhes.map(h => `
+        <div class="time-pill">
+          ${h.horario}
+          <small>${h.dia_semana}</small>
+        </div>
+      `).join('');
+    }
+
+    async function loadItinerario(id) {
+      const { data } = await fetchApi(`/api/v1/linhas/${id}/itinerario`);
+      const pontos = data.pontos_parada || [];
+      document.getElementById('pontos-count').textContent = `${pontos.length} paradas`;
+
+      const timeline = document.getElementById('stops-timeline');
+      timeline.innerHTML = pontos.map((p, idx) => `
+        <div class="stop-item">
+          <span class="stop-dot"></span>
+          <h4>${idx + 1}. ${p.nome}</h4>
+          <p>${p.endereco}</p>
+        </div>
+      `).join('');
+    }
+
+    async function testEndpoint(url) {
+      await fetchApi(url);
+    }
+
+    // Eventos de busca (UC04)
+    document.getElementById('search-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const term = document.getElementById('search-input').value.trim();
+      await loadLines(term);
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', async () => {
+      document.getElementById('search-input').value = '';
+      await loadLines('');
+    });
+
+    // Eventos de filtro por dia da semana (RF06)
+    document.querySelectorAll('.day-tab').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        document.querySelectorAll('.day-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentDayFilter = btn.dataset.dia;
+        await loadHorarios(currentLineId, currentDayFilter);
+      });
+    });
+
+    // Evento de cadastro de nova linha (POST /api/v1/linhas)
+    document.getElementById('create-line-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        numero: document.getElementById('new-numero').value.trim(),
+        nome: document.getElementById('new-nome').value.trim(),
+        origem: document.getElementById('new-origem').value.trim(),
+        destino: document.getElementById('new-destino').value.trim()
+      };
+      const { res } = await fetchApi('/api/v1/linhas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        e.target.reset();
+        await loadStatus();
+        await loadLines('');
+      }
+    });
+
+    // Inicialização
+    (async () => {
+      await loadStatus();
+      await selectLine(1);
+    })();
+  </script>
+</body>
+</html>
